@@ -2,14 +2,15 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 
-
 const ShowProducts = () => {
     const url = 'http://localhost:8000/agustintavernacrud/productos';
     const [productos, setProductos] = useState([]);
-    const [id, setId] = useState(''); 
-    const [nombreProducto, setNombreProducto] = useState(''); 
+    const [productosUSD, setProductosUSD] = useState([]);
+    const [id, setId] = useState('');
+    const [nombreProducto, setNombreProducto] = useState('');
     const [precio, setPrecio] = useState('');
     const [title, setTitle] = useState('');
+    const [showUSD, setShowUSD] = useState(false);
 
     useEffect(() => {
         getProductos();
@@ -18,14 +19,14 @@ const ShowProducts = () => {
     const getProductos = async () => {
         const respuesta = await axios.get(url);
         setProductos(respuesta.data);
-    }
+    };
 
     const openModal = (tipo, producto = {}) => {
         setTitle(tipo === 'agregar' ? 'Agregar Producto' : 'Editar Producto');
         setId(producto.id || '');
         setNombreProducto(producto.nombre_producto || '');
         setPrecio(producto.precio || '');
-    }
+    };
 
     const addProducto = async () => {
         try {
@@ -41,6 +42,7 @@ const ShowProducts = () => {
             });
             Swal.fire('Agregado', 'Producto agregado correctamente', 'success');
             getProductos();
+            if (showUSD) calculateUSD();  // Actualizar precios en USD después de agregar producto si está activado
         } catch (error) {
             console.error(error);
             Swal.fire('Error', 'Hubo un problema al agregar el producto', 'error');
@@ -62,12 +64,13 @@ const ShowProducts = () => {
             });
             Swal.fire('Actualizado', 'Producto actualizado correctamente', 'success');
             getProductos();
+            if (showUSD) calculateUSD();  // Actualizar precios en USD después de actualizar producto si está activado
         } catch (error) {
             console.error(error);
             Swal.fire('Error', 'Hubo un problema al actualizar el producto', 'error');
         }
     };
-    
+
     const deleteProducto = async (id) => {
         Swal.fire({
             title: '¿Estás seguro?',
@@ -83,15 +86,16 @@ const ShowProducts = () => {
                     await axios.request({
                         url: 'http://localhost:8000/agustintavernacrud/productos',
                         method: 'delete',
-                        data: { id: id }, 
+                        data: { id: id },
                         headers: {
                             'Content-Type': 'application/json',
                         },
                         withCredentials: true
                     });
-                    
+
                     Swal.fire('Eliminado', 'Producto eliminado correctamente', 'success');
                     getProductos();
+                    if (showUSD) calculateUSD();  // Actualizar precios en USD después de eliminar producto si está activado
                 } catch (error) {
                     console.error(error);
                     Swal.fire('Error', 'Hubo un problema al eliminar el producto', 'error');
@@ -106,6 +110,21 @@ const ShowProducts = () => {
         } else {
             addProducto();
         }
+    };
+
+    const calculateUSD = async () => {
+        try {
+            const response = await axios.post('http://localhost:8000/agustintavernacrud/productos/usd');
+            setProductosUSD(response.data);
+            setShowUSD(true);
+        } catch (error) {
+            console.error('There was an error fetching the USD prices!', error);
+            Swal.fire('Error', 'Hubo un problema al obtener los precios en USD', 'error');
+        }
+    };
+
+    const toggleUSD = () => {
+        setShowUSD(prevShowUSD => !prevShowUSD);
     };
 
     return (
@@ -129,12 +148,16 @@ const ShowProducts = () => {
             <div className='row mt-3'>
                 <div className='col-12 col-lg-6 offset-0 offset-lg-3'>
                     <div className='table-responsive'>
+                        <button onClick={showUSD ? toggleUSD : calculateUSD} className='btn btn-primary mb-3'>
+                            {showUSD ? 'Ocultar precio en USD' : 'Calcular precio en USD'}
+                        </button>
                         <table className='table table-bordered'>
                             <thead>
                                 <tr>
                                     <th>Id</th>
                                     <th>Nombre del Producto</th>
                                     <th>Precio</th>
+                                    {showUSD && <th>Precio en USD</th>}
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
@@ -144,6 +167,7 @@ const ShowProducts = () => {
                                         <td>{i + 1}</td>
                                         <td>{producto.nombre_producto}</td>
                                         <td>{producto.precio}</td>
+                                        {showUSD && <td>{productosUSD[i]?.precio_usd || 'N/A'}</td>}
                                         <td>
                                             <button 
                                                 className='btn btn-warning'
