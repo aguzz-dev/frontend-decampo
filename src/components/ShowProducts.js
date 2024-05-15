@@ -114,7 +114,7 @@ const ShowProducts = () => {
 
     const calculateUSD = async () => {
         try {
-            const response = await axios.post('http://localhost:8000/agustintavernacrud/productos/usd');
+            const response = await axios.get('http://localhost:8000/agustintavernacrud/productos/usd');
             setProductosUSD(response.data);
             setShowUSD(true);
         } catch (error) {
